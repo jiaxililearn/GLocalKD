@@ -12,8 +12,16 @@ import numpy as np
 
 
 class GraphConv(nn.Module):
-    def __init__(self, input_dim, output_dim, add_self=False, normalize_embedding=False,
-            dropout=0.0, bias=True):
+    def __init__(
+        self,
+        input_dim,
+        output_dim,
+        add_self=False,
+        normalize_embedding=False,
+        dropout=0.0,
+        bias=True,
+        device='cuda'
+    ):
         super(GraphConv, self).__init__()
         self.add_self = add_self
         self.dropout = dropout
@@ -22,11 +30,14 @@ class GraphConv(nn.Module):
         self.normalize_embedding = normalize_embedding
         self.input_dim = input_dim
         self.output_dim = output_dim
-        self.weight = nn.Parameter(torch.FloatTensor(input_dim, output_dim).cuda())
+        self.device = device
+
+        self.weight = nn.Parameter(torch.FloatTensor(input_dim, output_dim).to(self.device))
         if bias:
-            self.bias = nn.Parameter(torch.FloatTensor(output_dim).cuda())
+            self.bias = nn.Parameter(torch.FloatTensor(output_dim).to(self.device))
         else:
             self.bias = None
+        
 
     def forward(self, x, adj):
         if self.dropout > 0.001:
@@ -34,31 +45,50 @@ class GraphConv(nn.Module):
         y = torch.matmul(adj, x)
         if self.add_self:
             y += x
-        y = torch.matmul(y,self.weight)
+        y = torch.matmul(y, self.weight)
         if self.bias is not None:
             y = y + self.bias
         if self.normalize_embedding:
             y = F.normalize(y, p=2, dim=2)
         return y
-    
+
 
 class GcnEncoderGraph_teacher(nn.Module):
-    def __init__(self, input_dim, hidden_dim, embedding_dim, label_dim, num_layers,
-            pred_hidden_dims=[], concat=False, bn=True, dropout=0.0, args=None):
+    def __init__(
+        self,
+        input_dim,
+        hidden_dim,
+        embedding_dim,
+        label_dim,
+        num_layers,
+        pred_hidden_dims=[],
+        concat=False,
+        bn=True,
+        dropout=0.0,
+        args=None,
+    ):
         super(GcnEncoderGraph_teacher, self).__init__()
         self.concat = concat
         add_self = not concat
         self.bn = bn
         self.num_layers = num_layers
-        self.num_aggs=1
+        self.num_aggs = 1
+
+        self.device = "cpu" if args.cpu else "cuda"
 
         self.bias = True
         if args is not None:
             self.bias = args.bias
 
         self.conv_first, self.conv_block, self.conv_last = self.build_conv_layers(
-                input_dim, hidden_dim, embedding_dim, num_layers, 
-                add_self, normalize=True, dropout=dropout)
+            input_dim,
+            hidden_dim,
+            embedding_dim,
+            num_layers,
+            add_self,
+            normalize=True,
+            dropout=dropout,
+        )
         self.act = nn.ReLU()
         self.label_dim = label_dim
 
@@ -69,48 +99,80 @@ class GcnEncoderGraph_teacher(nn.Module):
 
         for m in self.modules():
             if isinstance(m, GraphConv):
-                m.weight.data = init.kaiming_uniform_(m.weight.data, mode='fan_in', nonlinearity='relu')
+                m.weight.data = init.kaiming_uniform_(
+                    m.weight.data, mode="fan_in", nonlinearity="relu"
+                )
                 if m.bias is not None:
                     m.bias.data = init.constant(m.bias.data, 0.0)
 
-    def build_conv_layers(self, input_dim, hidden_dim, embedding_dim, num_layers, add_self,
-            normalize=False, dropout=0.0):
-        conv_first = GraphConv(input_dim=input_dim, output_dim=hidden_dim, add_self=add_self,
-                normalize_embedding=normalize, bias=self.bias)
+    def build_conv_layers(
+        self,
+        input_dim,
+        hidden_dim,
+        embedding_dim,
+        num_layers,
+        add_self,
+        normalize=False,
+        dropout=0.0,
+    ):
+        conv_first = GraphConv(
+            input_dim=input_dim,
+            output_dim=hidden_dim,
+            add_self=add_self,
+            normalize_embedding=normalize,
+            bias=self.bias,
+            device=self.device
+        )
         conv_block = nn.ModuleList(
-                [GraphConv(input_dim=hidden_dim, output_dim=hidden_dim, add_self=add_self,
-                        normalize_embedding=normalize, dropout=dropout, bias=self.bias) 
-                 for i in range(num_layers-2)])
-        conv_last = GraphConv(input_dim=hidden_dim, output_dim=embedding_dim, add_self=add_self,
-                normalize_embedding=normalize, bias=self.bias)
+            [
+                GraphConv(
+                    input_dim=hidden_dim,
+                    output_dim=hidden_dim,
+                    add_self=add_self,
+                    normalize_embedding=normalize,
+                    dropout=dropout,
+                    bias=self.bias,
+                    device=self.device
+                )
+                for i in range(num_layers - 2)
+            ]
+        )
+        conv_last = GraphConv(
+            input_dim=hidden_dim,
+            output_dim=embedding_dim,
+            add_self=add_self,
+            normalize_embedding=normalize,
+            bias=self.bias,
+            device=self.device
+        )
         return conv_first, conv_block, conv_last
 
-
     def apply_bn(self, x):
-        ''' Batch normalization of 3D tensor x
-        '''
-        bn_module = nn.BatchNorm1d(x.size()[1]).cuda()
+        """Batch normalization of 3D tensor x"""
+        bn_module = nn.BatchNorm1d(x.size()[1]).to(self.device)
         return bn_module(x)
 
-    def gcn_forward(self, x, adj, conv_first, conv_block, conv_last, embedding_mask=None):
+    def gcn_forward(
+        self, x, adj, conv_first, conv_block, conv_last, embedding_mask=None
+    ):
 
-        ''' Perform forward prop with graph convolution.
+        """Perform forward prop with graph convolution.
         Returns:
             Embedding matrix with dimension [batch_size x num_nodes x embedding]
-        '''
+        """
 
         x = conv_first(x, adj)
-        x = self.act(x)#relu
+        x = self.act(x)  # relu
         if self.bn:
             x = self.apply_bn(x)
         x_all = [x]
         for i in range(len(conv_block)):
-            x = conv_block[i](x,adj)
+            x = conv_block[i](x, adj)
             x = self.act(x)
             if self.bn:
                 x = self.apply_bn(x)
             x_all.append(x)
-        x = conv_last(x,adj)
+        x = conv_last(x, adj)
         x_all.append(x)
         x_tensor = torch.cat(x_all, dim=2)
         if embedding_mask is not None:
@@ -126,17 +188,17 @@ class GcnEncoderGraph_teacher(nn.Module):
         out_all = []
         out, _ = torch.max(x, dim=1)
         out_all.append(out)
-        for i in range(self.num_layers-2):
-            x = self.conv_block[i](x,adj)
+        for i in range(self.num_layers - 2):
+            x = self.conv_block[i](x, adj)
             x = self.act(x)
             if self.bn:
                 x = self.apply_bn(x)
-            out,_ = torch.max(x, dim=1)
+            out, _ = torch.max(x, dim=1)
             out_all.append(out)
             if self.num_aggs == 2:
                 out = torch.sum(x, dim=1)
                 out_all.append(out)
-        x = self.conv_last(x,adj)
+        x = self.conv_last(x, adj)
         out, _ = torch.max(x, dim=1)
         out_all.append(out)
         if self.num_aggs == 2:
@@ -146,29 +208,45 @@ class GcnEncoderGraph_teacher(nn.Module):
             output = torch.cat(out_all, dim=1)
         else:
             output = out
-        return x,output
+        return x, output
 
 
-        
-        
-        
 class GcnEncoderGraph_student(nn.Module):
-    def __init__(self, input_dim, hidden_dim, embedding_dim, label_dim, num_layers,
-            pred_hidden_dims=[], concat=False, bn=True, dropout=0.1, args=None):
+    def __init__(
+        self,
+        input_dim,
+        hidden_dim,
+        embedding_dim,
+        label_dim,
+        num_layers,
+        pred_hidden_dims=[],
+        concat=False,
+        bn=True,
+        dropout=0.1,
+        args=None,
+    ):
         super(GcnEncoderGraph_student, self).__init__()
         self.concat = concat
         add_self = not concat
         self.bn = bn
         self.num_layers = num_layers
-        self.num_aggs=1
+        self.num_aggs = 1
+
+        self.device = "cpu" if args.cpu else "cuda"
 
         self.bias = True
         if args is not None:
             self.bias = args.bias
 
         self.conv_first, self.conv_block, self.conv_last = self.build_conv_layers(
-                input_dim, hidden_dim, embedding_dim, num_layers, 
-                add_self, normalize=True, dropout=dropout)
+            input_dim,
+            hidden_dim,
+            embedding_dim,
+            num_layers,
+            add_self,
+            normalize=True,
+            dropout=dropout,
+        )
         self.act = nn.ReLU()
         self.label_dim = label_dim
 
@@ -177,37 +255,69 @@ class GcnEncoderGraph_student(nn.Module):
         else:
             self.pred_input_dim = embedding_dim
 
-
         for m in self.modules():
             if isinstance(m, GraphConv):
-                m.weight.data = init.kaiming_uniform_(m.weight.data, mode='fan_in', nonlinearity='relu')
+                m.weight.data = init.kaiming_uniform_(
+                    m.weight.data, mode="fan_in", nonlinearity="relu"
+                )
                 if m.bias is not None:
                     m.bias.data = init.constant(m.bias.data, 0.0)
 
-    def build_conv_layers(self, input_dim, hidden_dim, embedding_dim, num_layers, add_self,
-            normalize=False, dropout=0.0):
-        conv_first = GraphConv(input_dim=input_dim, output_dim=hidden_dim, add_self=add_self,
-                normalize_embedding=normalize, bias=self.bias)
+    def build_conv_layers(
+        self,
+        input_dim,
+        hidden_dim,
+        embedding_dim,
+        num_layers,
+        add_self,
+        normalize=False,
+        dropout=0.0,
+    ):
+        conv_first = GraphConv(
+            input_dim=input_dim,
+            output_dim=hidden_dim,
+            add_self=add_self,
+            normalize_embedding=normalize,
+            bias=self.bias,
+            device=self.device
+        )
         conv_block = nn.ModuleList(
-                [GraphConv(input_dim=hidden_dim, output_dim=hidden_dim, add_self=add_self,
-                        normalize_embedding=normalize, dropout=dropout, bias=self.bias) 
-                 for i in range(num_layers-2)])
-        conv_last = GraphConv(input_dim=hidden_dim, output_dim=embedding_dim, add_self=add_self,
-                normalize_embedding=normalize, bias=self.bias)
+            [
+                GraphConv(
+                    input_dim=hidden_dim,
+                    output_dim=hidden_dim,
+                    add_self=add_self,
+                    normalize_embedding=normalize,
+                    dropout=dropout,
+                    bias=self.bias,
+                    device=self.device
+                )
+                for i in range(num_layers - 2)
+            ]
+        )
+        conv_last = GraphConv(
+            input_dim=hidden_dim,
+            output_dim=embedding_dim,
+            add_self=add_self,
+            normalize_embedding=normalize,
+            bias=self.bias,
+            device=self.device
+        )
         return conv_first, conv_block, conv_last
 
     def apply_bn(self, x):
-        ''' Batch normalization of 3D tensor x
-        '''
-        bn_module = nn.BatchNorm1d(x.size()[1]).cuda()
+        """Batch normalization of 3D tensor x"""
+        bn_module = nn.BatchNorm1d(x.size()[1]).to(self.device)
         return bn_module(x)
 
-    def gcn_forward(self, x, adj, conv_first, conv_block, conv_last, embedding_mask=None):
+    def gcn_forward(
+        self, x, adj, conv_first, conv_block, conv_last, embedding_mask=None
+    ):
 
-        ''' Perform forward prop with graph convolution.
+        """Perform forward prop with graph convolution.
         Returns:
             Embedding matrix with dimension [batch_size x num_nodes x embedding]
-        '''
+        """
 
         x = conv_first(x, adj)
         x = self.act(x)
@@ -215,12 +325,12 @@ class GcnEncoderGraph_student(nn.Module):
             x = self.apply_bn(x)
         x_all = [x]
         for i in range(len(conv_block)):
-            x = conv_block[i](x,adj)
+            x = conv_block[i](x, adj)
             x = self.act(x)
             if self.bn:
                 x = self.apply_bn(x)
             x_all.append(x)
-        x = conv_last(x,adj)
+        x = conv_last(x, adj)
         x_all.append(x)
         x_tensor = torch.cat(x_all, dim=2)
         if embedding_mask is not None:
@@ -236,17 +346,17 @@ class GcnEncoderGraph_student(nn.Module):
         out_all = []
         out, _ = torch.max(x, dim=1)
         out_all.append(out)
-        for i in range(self.num_layers-2):
-            x = self.conv_block[i](x,adj)
+        for i in range(self.num_layers - 2):
+            x = self.conv_block[i](x, adj)
             x = self.act(x)
             if self.bn:
                 x = self.apply_bn(x)
-            out,_ = torch.max(x, dim=1)
+            out, _ = torch.max(x, dim=1)
             out_all.append(out)
             if self.num_aggs == 2:
                 out = torch.sum(x, dim=1)
                 out_all.append(out)
-        x = self.conv_last(x,adj)
+        x = self.conv_last(x, adj)
         out, _ = torch.max(x, dim=1)
         out_all.append(out)
         if self.num_aggs == 2:
