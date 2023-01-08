@@ -4,13 +4,13 @@ import networkx as nx
 import numpy as np
 
 def node_iter(G):
-    if float(nx.__version__)<2.0:
+    if nx.__version__ < '2.0.0':
         return G.nodes()
     else:
         return G.nodes
 
 def node_dict(G):
-    if float(nx.__version__)>2.1:
+    if nx.__version__ > '2.1.0':
         node_dict = G.nodes
     else:
         node_dict = G.node
