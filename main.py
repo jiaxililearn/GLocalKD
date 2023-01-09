@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 @author: MaRongrong
+@editor: Jiaxi Li
 """
-
+import os
 import numpy as np
 from sklearn.utils.random import sample_without_replacement
 from sklearn.metrics import auc, precision_recall_curve, roc_curve
@@ -211,6 +212,14 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
             auroc_final = test_roc_ab
     return auroc_final
 
+def read_train_test_index(datadir, dataname):
+    prefix = os.path.join(datadir, dataname)
+    with open(f'{prefix}/model_gid_list_train.txt') as fin:
+        train_gids = [int(i) for i in fin.read().strip().split()]
+    with open(f'{prefix}/model_gid_list_eval.txt') as fin:
+        eval_gids = [int(i) for i in fin.read().strip().split()]
+    
+    return [train_gids], [eval_gids]
 
 if __name__ == "__main__":
     args = arg_parse()
@@ -230,7 +239,8 @@ if __name__ == "__main__":
 
     # if fix the train / test sets
     if args.fix_train_test:
-        pass
+        train_test_index = read_train_test_index(args.datadir, args.DS)
+
     else:
         kfd = StratifiedKFold(n_splits=5, random_state=args.seed, shuffle=True)
         train_test_index = kfd.split(graphs, graphs_label)
