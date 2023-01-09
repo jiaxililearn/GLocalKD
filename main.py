@@ -27,6 +27,7 @@ from matplotlib import cm
 from tdc.utils import retrieve_label_name_list
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedKFold
+from tqdm import tqdm
 
 
 def arg_parse():
@@ -136,7 +137,7 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
         total_loss = 0.0
         model_student.train()
 
-        for batch_idx, data in enumerate(dataset):
+        for batch_idx, data in tqdm(enumerate(dataset)):
             begin_time = time.time()
             model_student.zero_grad()
             adj = Variable(data["adj"].float(), requires_grad=False).to(device)
@@ -260,7 +261,7 @@ if __name__ == "__main__":
             max_num_nodes=max_nodes_num,
             sample_size=args.sample_size
         )
-        print(f'dataset_sampler_train sample 1: {dataset_sampler_train[0]}')
+        # print(f'dataset_sampler_train sample 1: {dataset_sampler_train[0]}')
 
         model_teacher = GCN_embedding.GcnEncoderGraph_teacher(
             dataset_sampler_train.feat_dim,
