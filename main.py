@@ -180,7 +180,7 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
             total_loss += loss
             elapsed = time.time() - begin_time
             total_time += elapsed
-            print(f"Batch Loss: {loss};")
+            print(f"Batch Loss: {loss}; Batch Time: {elapsed};")
 
             # clear gpu cache
             torch.cuda.empty_cache()
@@ -233,7 +233,7 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
 
         if epoch == (args.num_epochs - 1):
             auroc_final = test_roc_ab
-        print(f"Epoch Loss: {total_loss};")
+        print(f"Epoch Loss: {total_loss}; Epoch Time: {total_time};")
 
     return auroc_final
 
