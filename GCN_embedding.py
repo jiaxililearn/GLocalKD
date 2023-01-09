@@ -237,9 +237,9 @@ class GcnEncoderGraph_teacher(nn.Module):
             x_tensor = x_tensor * embedding_mask
         return x_tensor
 
-    def forward(self, x, adj, batch_num_nodes=None, **kwargs):
+    def forward(self, x, adj, node_types=None, batch_num_nodes=None, **kwargs):
         # conv
-        x = self.conv_first(x, adj)
+        x = self.conv_first(x, adj, node_types)
         x = self.act(x)
         if self.bn:
             x = self.apply_bn(x)
@@ -247,7 +247,7 @@ class GcnEncoderGraph_teacher(nn.Module):
         out, _ = torch.max(x, dim=1)
         out_all.append(out)
         for i in range(self.num_layers - 2):
-            x = self.conv_block[i](x, adj)
+            x = self.conv_block[i](x, adj, node_types)
             x = self.act(x)
             if self.bn:
                 x = self.apply_bn(x)
@@ -256,7 +256,7 @@ class GcnEncoderGraph_teacher(nn.Module):
             if self.num_aggs == 2:
                 out = torch.sum(x, dim=1)
                 out_all.append(out)
-        x = self.conv_last(x, adj)
+        x = self.conv_last(x, adj, node_types)
         out, _ = torch.max(x, dim=1)
         out_all.append(out)
         if self.num_aggs == 2:
