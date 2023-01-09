@@ -37,7 +37,6 @@ class GraphConv(nn.Module):
             self.bias = nn.Parameter(torch.FloatTensor(output_dim).to(self.device))
         else:
             self.bias = None
-        
 
     def forward(self, x, adj):
         if self.dropout > 0.001:
@@ -85,6 +84,8 @@ class HetGraphConv(nn.Module):
             self.bias = nn.Parameter(torch.FloatTensor(output_dim).to(self.device))
         else:
             self.bias = None
+        self.relu = nn.ReLU()
+        self.fc_het_layer = nn.Linear(output_dim, output_dim, bias=True)
 
     def forward(self, x, adj, node_types):
 
@@ -93,22 +94,31 @@ class HetGraphConv(nn.Module):
         # print(f'shape adj: {adj.shape}')
         print(f'node_types: {node_types}')
         print(f'node_types shape: {node_types.shape}')
+        het_y = []
         for ntype in range(self.num_node_types):
-            nmask = node_types == ntype
-            print(f'nmask: {nmask}')
-            print(f'nmask shape: {nmask.shape}')
-            print(f'new_x shape:{x[:,nmask,:].shape}')
-        if self.dropout > 0.001:
-            x = self.dropout_layer(x)
-        y = torch.matmul(adj, x)
-        if self.add_self:
-            y += x
-        y = torch.matmul(y, self.weight)
-        if self.bias is not None:
-            y = y + self.bias
-        if self.normalize_embedding:
-            y = F.normalize(y, p=2, dim=2)
-        return y
+            xmask = (node_types == ntype).unsqueeze(-1).expand(x.size())
+            adjmask = (node_types == ntype).unsqueeze(-1).expand(adj.size())
+            adjmask = torch.transpose(adjmask, 1, 2)
+            
+            het_x = x.masked_fill(~xmask, 0)
+            het_adj = adj.masked_fill(~adjmask, 0)
+            print(f'nmask: {xmask}')
+            print(f'nmask shape: {xmask.shape}')
+            if self.dropout > 0.001:
+                het_x = self.dropout_layer(het_x)
+            y = torch.matmul(het_adj, het_x)
+            if self.add_self:
+                y += het_x
+            y = torch.matmul(y, self.weight)
+            if self.bias is not None:
+                y = y + self.bias
+            if self.normalize_embedding:
+                y = F.normalize(y, p=2, dim=2)
+            het_y.append(self.relu(y))
+        het_y = torch.stack(het_y)
+        het_y = torch.max(het_y, dim=0)
+        het_y = self.fc_het_layer(het_y)
+        return het_y
 
 
 class GcnEncoderGraph_teacher(nn.Module):
