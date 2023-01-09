@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import networkx as nx
 import numpy as np
 import torch
@@ -8,19 +9,27 @@ import util
 class GraphSampler(torch.utils.data.Dataset):
     ''' Sample graphs and nodes in graph
     '''
-    def __init__(self, G_list, features='default', normalize=True, assign_feat='default', max_num_nodes=0):
+    def __init__(self, graphs=None, g_index=None, G_list=None, features='default', normalize=True, assign_feat='default', max_num_nodes=0):
         self.adj_all = []
         self.len_all = []
         self.feature_all = []
         self.label_all = []
-        
+
         self.assign_feat_all = []
         self.max_num_nodes = max_num_nodes
 
         if features == 'default':
             self.feat_dim = util.node_dict(G_list[0])[0]['feat'].shape[0]
 
-        for G in G_list:
+        if G_list is None:
+            graph_pool = g_index
+        else:
+            graph_pool = G_list
+
+        for G in tqdm(graph_pool):
+            if g_index is not None:
+                G = graphs[G]
+
             adj = np.array(nx.to_numpy_matrix(G))
             if normalize:
                 sqrt_deg = np.diag(1.0 / np.sqrt(np.sum(adj, axis=0, dtype=float).squeeze()))

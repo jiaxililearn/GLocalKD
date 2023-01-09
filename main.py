@@ -108,6 +108,9 @@ def arg_parse():
     parser.add_argument(
         "--cpu", dest="cpu", type=bool, default=False, help="using CPU or not"
     )
+    parser.add_argument(
+        "--fix-train-test", dest="fix_train_test", type=bool, default=False, help="use a fixed train/test set"
+    )
     return parser.parse_args()
 
 
@@ -224,23 +227,34 @@ if __name__ == "__main__":
     print(datanum)
     graphs_label = [graph.graph["label"] for graph in graphs]
 
-    kfd = StratifiedKFold(n_splits=5, random_state=args.seed, shuffle=True)
+    # if fix the train / test sets
+    if args.fix_train_test:
+        pass
+    else:
+        kfd = StratifiedKFold(n_splits=5, random_state=args.seed, shuffle=True)
+        train_test_index = kfd.split(graphs, graphs_label)
+
     result_auc = []
-    for k, (train_index, test_index) in enumerate(kfd.split(graphs, graphs_label)):
-        graphs_train_ = [graphs[i] for i in train_index]
-        graphs_test = [graphs[i] for i in test_index]
+    for k, (train_index, test_index) in enumerate(train_test_index):
 
-        graphs_train = []
-        for graph in graphs_train_:
-            if graph.graph["label"] != 0:
-                graphs_train.append(graph)
+        # Update: opt mem to store same set of graphs
+        # graphs_train_ = [graphs[i] for i in train_index]
+        # graphs_test = [graphs[i] for i in test_index]
 
-        num_train = len(graphs_train)
-        num_test = len(graphs_test)
+        # graphs_train = []
+        # for graph in graphs_train_:
+        #     if graph.graph["label"] != 0:
+        #         graphs_train.append(graph)
+
+        num_train = len(train_index)
+        num_test = len(test_index)
         print(num_train, num_test)
 
         dataset_sampler_train = GraphSampler(
-            graphs_train,
+            # graphs_train,
+            graphs,
+            train_index,
+            G_list=None,
             features=args.feature,
             normalize=False,
             max_num_nodes=max_nodes_num,
@@ -273,7 +287,10 @@ if __name__ == "__main__":
         )
 
         dataset_sampler_test = GraphSampler(
-            graphs_test,
+            # graphs_test,
+            graph,
+            test_index,
+            G_list=None,
             features=args.feature,
             normalize=False,
             max_num_nodes=max_nodes_num,
