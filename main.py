@@ -181,6 +181,9 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
             elapsed = time.time() - begin_time
             total_time += elapsed
 
+            # clear gpu cache
+            torch.cuda.empty_cache()
+
         if (epoch + 1) % 2 == 0 and epoch > 0:
             epochs.append(epoch)
             model_student.eval()
