@@ -52,6 +52,57 @@ class GraphConv(nn.Module):
             y = F.normalize(y, p=2, dim=2)
         return y
 
+class HetGraphConv(nn.Module):
+    """
+    Create the HetGCN Layer on top of GLocalKD
+    """
+    def __init__(
+        self,
+        input_dim,
+        output_dim,
+        add_self=False,
+        normalize_embedding=False,
+        dropout=0.0,
+        bias=True,
+        num_node_types=1,
+        device='cuda'
+    ):
+        super(HetGraphConv, self).__init__()
+        self.add_self = add_self
+        self.dropout = dropout
+        if dropout > 0.001:
+            self.dropout_layer = nn.Dropout(p=dropout)
+        self.normalize_embedding = normalize_embedding
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.device = device
+
+        self.num_node_types = num_node_types
+        # for _ in range(num_node_types):
+
+        self.weight = nn.Parameter(torch.FloatTensor(input_dim, output_dim).to(self.device))
+        if bias:
+            self.bias = nn.Parameter(torch.FloatTensor(output_dim).to(self.device))
+        else:
+            self.bias = None
+
+    def forward(self, x, adj):
+
+        # for ntype in range(self.num_node_types):
+        print(f'shape x: {x.shape}')
+        print(f'shape adj: {adj.shape}')
+        if self.dropout > 0.001:
+            x = self.dropout_layer(x)
+        y = torch.matmul(adj, x)
+        if self.add_self:
+            y += x
+        y = torch.matmul(y, self.weight)
+        if self.bias is not None:
+            y = y + self.bias
+        if self.normalize_embedding:
+            y = F.normalize(y, p=2, dim=2)
+        return y
+
 
 class GcnEncoderGraph_teacher(nn.Module):
     def __init__(
@@ -98,7 +149,7 @@ class GcnEncoderGraph_teacher(nn.Module):
             self.pred_input_dim = embedding_dim
 
         for m in self.modules():
-            if isinstance(m, GraphConv):
+            if isinstance(m, HetGraphConv):
                 m.weight.data = init.kaiming_uniform_(
                     m.weight.data, mode="fan_in", nonlinearity="relu"
                 )
@@ -115,7 +166,7 @@ class GcnEncoderGraph_teacher(nn.Module):
         normalize=False,
         dropout=0.0,
     ):
-        conv_first = GraphConv(
+        conv_first = HetGraphConv(
             input_dim=input_dim,
             output_dim=hidden_dim,
             add_self=add_self,
@@ -125,7 +176,7 @@ class GcnEncoderGraph_teacher(nn.Module):
         )
         conv_block = nn.ModuleList(
             [
-                GraphConv(
+                HetGraphConv(
                     input_dim=hidden_dim,
                     output_dim=hidden_dim,
                     add_self=add_self,
@@ -137,7 +188,7 @@ class GcnEncoderGraph_teacher(nn.Module):
                 for i in range(num_layers - 2)
             ]
         )
-        conv_last = GraphConv(
+        conv_last = HetGraphConv(
             input_dim=hidden_dim,
             output_dim=embedding_dim,
             add_self=add_self,
@@ -256,7 +307,7 @@ class GcnEncoderGraph_student(nn.Module):
             self.pred_input_dim = embedding_dim
 
         for m in self.modules():
-            if isinstance(m, GraphConv):
+            if isinstance(m, HetGraphConv):
                 m.weight.data = init.kaiming_uniform_(
                     m.weight.data, mode="fan_in", nonlinearity="relu"
                 )
@@ -273,7 +324,7 @@ class GcnEncoderGraph_student(nn.Module):
         normalize=False,
         dropout=0.0,
     ):
-        conv_first = GraphConv(
+        conv_first = HetGraphConv(
             input_dim=input_dim,
             output_dim=hidden_dim,
             add_self=add_self,
@@ -283,7 +334,7 @@ class GcnEncoderGraph_student(nn.Module):
         )
         conv_block = nn.ModuleList(
             [
-                GraphConv(
+                HetGraphConv(
                     input_dim=hidden_dim,
                     output_dim=hidden_dim,
                     add_self=add_self,
@@ -295,7 +346,7 @@ class GcnEncoderGraph_student(nn.Module):
                 for i in range(num_layers - 2)
             ]
         )
-        conv_last = GraphConv(
+        conv_last = HetGraphConv(
             input_dim=hidden_dim,
             output_dim=embedding_dim,
             add_self=add_self,
