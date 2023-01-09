@@ -219,7 +219,7 @@ def read_train_test_index(datadir, dataname):
     with open(f'{prefix}/model_gid_list_eval.txt') as fin:
         eval_gids = [int(i) for i in fin.read().strip().split()]
     
-    return [train_gids], [eval_gids]
+    return zip([train_gids], [eval_gids])
 
 if __name__ == "__main__":
     args = arg_parse()
