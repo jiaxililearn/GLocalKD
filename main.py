@@ -59,6 +59,9 @@ def arg_parse():
         "--batch-size", dest="batch_size", default=300, type=int, help="Batch size."
     )
     parser.add_argument(
+        "--sample-size", dest="sample_size", default=300, type=int, help="Sample size."
+    )
+    parser.add_argument(
         "--hidden-dim",
         dest="hidden_dim",
         default=512,
@@ -170,8 +173,8 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
             emb = []
 
             for batch_idx, data in enumerate(data_test_loader):
-                adj = Variable(data["adj"].float(), requires_grad=False).cuda()
-                h0 = Variable(data["feats"].float(), requires_grad=False).cuda()
+                adj = Variable(data["adj"].float(), requires_grad=False).to(device)
+                h0 = Variable(data["feats"].float(), requires_grad=False).to(device)
 
                 embed_node, embed = model_student(h0, adj)
                 embed_teacher_node, embed_teacher = model_teacher(h0, adj)

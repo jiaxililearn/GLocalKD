@@ -8,19 +8,26 @@ Global and Local Knowledge Distillation (GLocalKD) is introduced in our WSDM22 p
 
 Some of datasets are put in ./dataset folder. Due to the large file size limitation, some datasets are not uploaded in this project. You may download them from the urls listed in the paper.
 
+## Large Size Dataset
+```shell
+aws s3 sync s3://prod-tpgt-knowledge-lake-sandpit-v1/tmp/data/glocalkd/streamspot/ dataset/streamspot/
+```
 ## Train
 
 For datasets except HSE, p53, MMP, PPAR-gamma and hERG, run the following code. For datasets with node attributes, feature chooses default, otherwise deg-num.
-
-	python main.py --dataset [] --feature [default/deg-num]
+```shell
+python main.py --DS [] --feature [default/deg-num]
+```
 
 For HSE, p53, MMP and PPAR-gamma, run the following code.
-
-	python main_Tox.py --dataset []
+```shell
+python main_Tox.py --DS []
+```
 
 For hERG, run the following code.
-
-	python main_smiles.py
+```shell
+python main_smiles.py
+```
 
 
 ## Citation
