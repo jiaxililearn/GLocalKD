@@ -180,6 +180,7 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
             total_loss += loss
             elapsed = time.time() - begin_time
             total_time += elapsed
+            print(f"Batch Loss: {loss};")
 
             # clear gpu cache
             torch.cuda.empty_cache()
@@ -220,11 +221,20 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
 
             fpr_ab, tpr_ab, _ = roc_curve(y, label_test)
             test_roc_ab = auc(fpr_ab, tpr_ab)
+
+            precision, recall, pr_thresholds = precision_recall_curve(
+                y, label_test
+            )
+            ap = auc(recall, precision)
             print(
                 "semi-supervised abnormal detection: auroc_ab: {}".format(test_roc_ab)
             )
+            print(f"\tAUC:{test_roc_ab}; Avg Precision:{ap};")
+
         if epoch == (args.num_epochs - 1):
             auroc_final = test_roc_ab
+        print(f"Epoch Loss: {total_loss};")
+
     return auroc_final
 
 def read_train_test_index(datadir, dataname):
@@ -233,7 +243,7 @@ def read_train_test_index(datadir, dataname):
         train_gids = [int(i) for i in fin.read().strip().split()]
     with open(f'{prefix}/model_gid_list_eval.txt') as fin:
         eval_gids = [int(i) for i in fin.read().strip().split()]
-    
+
     return zip([train_gids], [eval_gids])
 
 if __name__ == "__main__":

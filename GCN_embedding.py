@@ -90,10 +90,10 @@ class HetGraphConv(nn.Module):
     def forward(self, x, adj, node_types):
 
         # for ntype in range(self.num_node_types):
-        print(f'shape x: {x.shape}')
-        print(f'shape adj: {adj.shape}')
+        # print(f'shape x: {x.shape}')
+        # print(f'shape adj: {adj.shape}')
         # print(f'node_types: {node_types}')
-        print(f'node_types shape: {node_types.shape}')
+        # print(f'node_types shape: {node_types.shape}')
         het_y = []
         for ntype in range(self.num_node_types):
             xmask = (node_types == ntype).unsqueeze(-1).expand(x.size()).to(self.device)
@@ -103,8 +103,8 @@ class HetGraphConv(nn.Module):
             het_x = x.masked_fill(~xmask, 0.0)
             het_adj = adj.masked_fill(~adjmask, 0.0)
 
-            print(f'nmask shape: {xmask.shape}')
-            print(f'nmask shape: {adjmask.shape}')
+            # print(f'nmask shape: {xmask.shape}')
+            # print(f'nmask shape: {adjmask.shape}')
             if self.dropout > 0.001:
                 het_x = self.dropout_layer(het_x)
             y = torch.matmul(het_adj, het_x)
