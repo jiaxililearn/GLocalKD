@@ -30,7 +30,7 @@ python main_smiles.py
 ```
 
 ```
-python main.py --DS streamspot --batch-size 16 --hidden-dim 64 --output-dim 32 --num_epochs 100 --fix-train-test True --lr 0.01
+python src/main.py --DS streamspot --batch-size 4 --hidden-dim 64 --output-dim 32 --num_epochs 100 --fix-train-test True --lr 0.01
 ```
 
 

@@ -123,6 +123,9 @@ def arg_parse():
     parser.add_argument(
         "--fix-train-test", dest="fix_train_test", type=bool, default=False, help="use a fixed train/test set"
     )
+    parser.add_argument(
+        "--sagemaker", dest="sagemaker", type=bool, default=False, help="if using sagemaker training"
+    )
     return parser.parse_args()
 
 
@@ -252,6 +255,10 @@ if __name__ == "__main__":
     setup_seed(args.seed)
 
     device = 'cpu' if args.cpu else 'cuda'
+
+    # Resolve Args
+    if args.sagemaker:
+        args.datadir = os.environ['SM_CHANNEL_TRAIN']
 
     graphs = load_data.read_graphfile(args.datadir, args.DS, max_nodes=args.max_nodes)
     datanum = len(graphs)
