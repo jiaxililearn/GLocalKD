@@ -69,7 +69,10 @@ class GraphSampler(torch.utils.data.Dataset):
             self.assign_feat_dim = self.assign_feat_all[0].shape[1]
 
     def __len__(self):
-        return len(self.adj_all)
+        if self.g_index is None:
+            return len(self.adj_all)
+        else:
+            return len(self.g_index)
 
     def __getitem__(self, idx):
         if self.g_index is None:
