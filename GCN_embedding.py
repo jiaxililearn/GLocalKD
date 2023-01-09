@@ -100,8 +100,8 @@ class HetGraphConv(nn.Module):
             adjmask = (node_types == ntype).unsqueeze(-1).expand(adj.size())
             adjmask = torch.transpose(adjmask, 1, 2)
 
-            het_x = x.masked_fill(~xmask, 0.0)
-            het_adj = adj.masked_fill(~adjmask, 0.0)
+            het_x = x.masked_fill(~xmask, 0.0).to(self.device)
+            het_adj = adj.masked_fill(~adjmask, 0.0).to(self.device)
 
             print(f'nmask shape: {xmask.shape}')
             print(f'nmask shape: {adjmask.shape}')
