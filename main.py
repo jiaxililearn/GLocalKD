@@ -96,6 +96,9 @@ def arg_parse():
         "--dropout", dest="dropout", default=0.3, type=float, help="Dropout rate."
     )
     parser.add_argument(
+        "--lr", dest="lr", default=0.0001, type=float, help="Learning Rate"
+    )
+    parser.add_argument(
         "--nobias",
         dest="bias",
         action="store_const",
@@ -128,7 +131,7 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
     device = 'cpu' if args.cpu else 'cuda'
 
     optimizer = torch.optim.Adam(
-        filter(lambda p: p.requires_grad, model_student.parameters()), lr=0.0001
+        filter(lambda p: p.requires_grad, model_student.parameters()), lr=args.lr
     )
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
     epochs = []
