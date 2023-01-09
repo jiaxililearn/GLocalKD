@@ -115,10 +115,13 @@ class GraphSampler(torch.utils.data.Dataset):
 
             # get structure feature
             feat = None
+            ntypes = None
             if self.features == 'default':
                 f = np.zeros((self.max_num_nodes, self.feat_dim), dtype=float)
+                ntypes = np.zeros((self.max_num_nodes,), dtype=float) - 1
                 for i,u in enumerate(G.nodes()):
                     f[i,:] = util.node_dict(G)[u]['feat']
+                    ntypes[i] = util.node_dict(G)[u]['label']  #TODO: put node types to others other than default
                 feat = f
             elif self.features == 'deg-num':
                 degs = np.sum(np.array(adj), 1)
@@ -137,6 +140,6 @@ class GraphSampler(torch.utils.data.Dataset):
             return {'adj': adj_padded,
                     'feats': feat,
                     'label': G.graph['label'],
+                    'node_types': ntypes,
                     'num_nodes': num_nodes,
                     'assign_feats': feat}
-

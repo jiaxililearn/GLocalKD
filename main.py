@@ -146,9 +146,10 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
             model_student.zero_grad()
             adj = Variable(data["adj"].float(), requires_grad=False).to(device)
             h0 = Variable(data["feats"].float(), requires_grad=False).to(device)
+            node_types = Variable(data["node_types"].int(), requires_grad=False).to(device)
 
-            embed_node, embed = model_student(h0, adj)
-            embed_teacher_node, embed_teacher = model_teacher(h0, adj)
+            embed_node, embed = model_student(h0, adj, node_types)
+            embed_teacher_node, embed_teacher = model_teacher(h0, adj, node_types)
             embed_teacher = embed_teacher.detach()
             embed_teacher_node = embed_teacher_node.detach()
             loss_node = (
@@ -183,9 +184,10 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
             for batch_idx, data in enumerate(data_test_loader):
                 adj = Variable(data["adj"].float(), requires_grad=False).to(device)
                 h0 = Variable(data["feats"].float(), requires_grad=False).to(device)
+                node_types = Variable(data["node_types"].int(), requires_grad=False).to(device)
 
-                embed_node, embed = model_student(h0, adj)
-                embed_teacher_node, embed_teacher = model_teacher(h0, adj)
+                embed_node, embed = model_student(h0, adj, node_types)
+                embed_teacher_node, embed_teacher = model_teacher(h0, adj, node_types)
                 loss_node = torch.mean(
                     F.mse_loss(embed_node, embed_teacher_node, reduction="none"), dim=2
                 ).mean(dim=1)
