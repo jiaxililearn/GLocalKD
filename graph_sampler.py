@@ -109,7 +109,7 @@ class GraphSampler(torch.utils.data.Dataset):
                 adj_padded = np.delete(adj_padded, [deg_ind], axis=1)
             else:
                 adj_padded = adj
-            
+
             # get structure feature
             feat = None
             if self.features == 'default':

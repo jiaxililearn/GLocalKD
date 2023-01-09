@@ -260,6 +260,7 @@ if __name__ == "__main__":
             max_num_nodes=max_nodes_num,
             sample_size=args.sample_size
         )
+        print(f'dataset_sampler_train sample 1: {dataset_sampler_train[0]}')
 
         model_teacher = GCN_embedding.GcnEncoderGraph_teacher(
             dataset_sampler_train.feat_dim,
