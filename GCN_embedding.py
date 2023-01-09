@@ -90,20 +90,21 @@ class HetGraphConv(nn.Module):
     def forward(self, x, adj, node_types):
 
         # for ntype in range(self.num_node_types):
-        # print(f'shape x: {x.shape}')
-        # print(f'shape adj: {adj.shape}')
-        print(f'node_types: {node_types}')
+        print(f'shape x: {x.shape}')
+        print(f'shape adj: {adj.shape}')
+        # print(f'node_types: {node_types}')
         print(f'node_types shape: {node_types.shape}')
         het_y = []
         for ntype in range(self.num_node_types):
             xmask = (node_types == ntype).unsqueeze(-1).expand(x.size())
             adjmask = (node_types == ntype).unsqueeze(-1).expand(adj.size())
             adjmask = torch.transpose(adjmask, 1, 2)
-            
-            het_x = x.masked_fill(~xmask, 0)
-            het_adj = adj.masked_fill(~adjmask, 0)
-            print(f'nmask: {xmask}')
+
+            het_x = x.masked_fill(~xmask, 0.0)
+            het_adj = adj.masked_fill(~adjmask, 0.0)
+
             print(f'nmask shape: {xmask.shape}')
+            print(f'nmask shape: {adjmask.shape}')
             if self.dropout > 0.001:
                 het_x = self.dropout_layer(het_x)
             y = torch.matmul(het_adj, het_x)
@@ -156,6 +157,7 @@ class GcnEncoderGraph_teacher(nn.Module):
             add_self,
             normalize=True,
             dropout=dropout,
+            num_node_types=args.num_node_types
         )
         self.act = nn.ReLU()
         self.label_dim = label_dim
@@ -182,6 +184,7 @@ class GcnEncoderGraph_teacher(nn.Module):
         add_self,
         normalize=False,
         dropout=0.0,
+        num_node_types=1,
     ):
         conv_first = HetGraphConv(
             input_dim=input_dim,
@@ -189,7 +192,8 @@ class GcnEncoderGraph_teacher(nn.Module):
             add_self=add_self,
             normalize_embedding=normalize,
             bias=self.bias,
-            device=self.device
+            device=self.device,
+            num_node_types=num_node_types
         )
         conv_block = nn.ModuleList(
             [
@@ -200,7 +204,8 @@ class GcnEncoderGraph_teacher(nn.Module):
                     normalize_embedding=normalize,
                     dropout=dropout,
                     bias=self.bias,
-                    device=self.device
+                    device=self.device,
+                    num_node_types=num_node_types
                 )
                 for i in range(num_layers - 2)
             ]
@@ -211,7 +216,8 @@ class GcnEncoderGraph_teacher(nn.Module):
             add_self=add_self,
             normalize_embedding=normalize,
             bias=self.bias,
-            device=self.device
+            device=self.device,
+            num_node_types=num_node_types
         )
         return conv_first, conv_block, conv_last
 
@@ -314,6 +320,7 @@ class GcnEncoderGraph_student(nn.Module):
             add_self,
             normalize=True,
             dropout=dropout,
+            num_node_types=args.num_node_types
         )
         self.act = nn.ReLU()
         self.label_dim = label_dim
@@ -340,6 +347,7 @@ class GcnEncoderGraph_student(nn.Module):
         add_self,
         normalize=False,
         dropout=0.0,
+        num_node_types=1,
     ):
         conv_first = HetGraphConv(
             input_dim=input_dim,
@@ -347,7 +355,8 @@ class GcnEncoderGraph_student(nn.Module):
             add_self=add_self,
             normalize_embedding=normalize,
             bias=self.bias,
-            device=self.device
+            device=self.device,
+            num_node_types=num_node_types
         )
         conv_block = nn.ModuleList(
             [
@@ -358,7 +367,8 @@ class GcnEncoderGraph_student(nn.Module):
                     normalize_embedding=normalize,
                     dropout=dropout,
                     bias=self.bias,
-                    device=self.device
+                    device=self.device,
+                    num_node_types=num_node_types
                 )
                 for i in range(num_layers - 2)
             ]
@@ -369,7 +379,8 @@ class GcnEncoderGraph_student(nn.Module):
             add_self=add_self,
             normalize_embedding=normalize,
             bias=self.bias,
-            device=self.device
+            device=self.device,
+            num_node_types=num_node_types
         )
         return conv_first, conv_block, conv_last
 
