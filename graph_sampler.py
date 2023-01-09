@@ -9,7 +9,7 @@ import util
 class GraphSampler(torch.utils.data.Dataset):
     ''' Sample graphs and nodes in graph
     '''
-    def __init__(self, graphs=None, g_index=None, G_list=None, features='default', normalize=True, assign_feat='default', max_num_nodes=0):
+    def __init__(self, graphs=None, g_index=None, G_list=None, features='default', normalize=True, assign_feat='default', max_num_nodes=0, sample_size=None):
         self.adj_all = []
         self.len_all = []
         self.feature_all = []
@@ -17,9 +17,10 @@ class GraphSampler(torch.utils.data.Dataset):
 
         self.assign_feat_all = []
         self.max_num_nodes = max_num_nodes
+        self.sample_size = sample_size
 
         if features == 'default':
-            self.feat_dim = util.node_dict(G_list[0])[0]['feat'].shape[0]
+            self.feat_dim = util.node_dict(graphs[0])[0]['feat'].shape[0]
 
         if G_list is None:
             graph_pool = g_index
@@ -57,7 +58,7 @@ class GraphSampler(torch.utils.data.Dataset):
                 self.feature_all.append(degs)
 
             self.assign_feat_all.append(self.feature_all[-1])
-            
+
         self.feat_dim = self.feature_all[0].shape[1]
         self.assign_feat_dim = self.assign_feat_all[0].shape[1]
 
