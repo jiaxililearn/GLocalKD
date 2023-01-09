@@ -96,12 +96,12 @@ class HetGraphConv(nn.Module):
         print(f'node_types shape: {node_types.shape}')
         het_y = []
         for ntype in range(self.num_node_types):
-            xmask = (node_types == ntype).unsqueeze(-1).expand(x.size())
+            xmask = (node_types == ntype).unsqueeze(-1).expand(x.size()).to(self.device)
             adjmask = (node_types == ntype).unsqueeze(-1).expand(adj.size())
-            adjmask = torch.transpose(adjmask, 1, 2)
+            adjmask = torch.transpose(adjmask, 1, 2).to(self.device)
 
-            het_x = x.masked_fill(~xmask, 0.0).to(self.device)
-            het_adj = adj.masked_fill(~adjmask, 0.0).to(self.device)
+            het_x = x.masked_fill(~xmask, 0.0)
+            het_adj = adj.masked_fill(~adjmask, 0.0)
 
             print(f'nmask shape: {xmask.shape}')
             print(f'nmask shape: {adjmask.shape}')
