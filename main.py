@@ -258,6 +258,7 @@ if __name__ == "__main__":
             features=args.feature,
             normalize=False,
             max_num_nodes=max_nodes_num,
+            sample_size=args.sample_size
         )
 
         model_teacher = GCN_embedding.GcnEncoderGraph_teacher(
@@ -288,7 +289,7 @@ if __name__ == "__main__":
 
         dataset_sampler_test = GraphSampler(
             # graphs_test,
-            graph,
+            graphs,
             test_index,
             G_list=None,
             features=args.feature,
