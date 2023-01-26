@@ -85,7 +85,7 @@ class HetGraphConv(nn.Module):
         else:
             self.bias = None
         self.relu = nn.ReLU()
-        self.fc_het_layer = nn.Linear(output_dim, output_dim, bias=True)
+        self.fc_het_layer = nn.Linear(output_dim*num_node_types, output_dim, bias=True)
 
     def forward(self, x, adj, node_types):
 
