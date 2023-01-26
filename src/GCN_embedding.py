@@ -115,8 +115,12 @@ class HetGraphConv(nn.Module):
                 y = y + self.bias
             if self.normalize_embedding:
                 y = F.normalize(y, p=2, dim=2)
+            print(f'y shape: {y.shape}')
             het_y.append(self.relu(y))
-        het_y = torch.stack(het_y)
+
+        # het_y = torch.stack(het_y)
+        het_y = torch.cat(het_y, dim=2)
+        print(f'het_y shape: {het_y.shape}')
         het_y, _ = torch.max(het_y, dim=0)
         het_y = self.fc_het_layer(het_y)
         return het_y
