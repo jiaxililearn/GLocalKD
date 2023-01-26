@@ -24,7 +24,8 @@ def read_graphfile(datadir, dataname, max_nodes=None):
         with open(filename_nodes) as f:
             for line in f:
                 line = line.strip("\n")
-                node_labels += [int(line) - 1]
+                # node_labels += [int(line) - 1]
+                node_labels += [int(line)]  # TODO: changed for steamspot and tralog data
         num_unique_node_labels = max(node_labels) + 1
     except IOError:
         print("No node labels")
