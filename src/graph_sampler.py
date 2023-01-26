@@ -136,7 +136,7 @@ class GraphSampler(torch.utils.data.Dataset):
                 else:
                     degs = np.expand_dims(degs, axis=1)
                 feat = degs
-
+            print('==== sample from here ====')
             return {'adj': adj_padded,
                     'feats': feat,
                     'label': G.graph['label'],

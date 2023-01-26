@@ -97,13 +97,13 @@ class HetGraphConv(nn.Module):
         het_y = []
         
         for ntype in range(self.num_node_types):
+            print(f'==== Node Type {ntype} ====')
             print(f'x.size(): {x.size()}')
             try:
                 xmask = (node_types == ntype).unsqueeze(-1).expand(x.size()).to(self.device)
                 adjmask = (node_types == ntype).unsqueeze(-1).expand(adj.size())
                 adjmask = torch.transpose(adjmask, 1, 2).to(self.device)
             except Exception as e:
-                print(f'==== Node Type {ntype} ====')
                 print(f'node_types: {node_types}')
                 print(f'(node_types == ntype).unsqueeze(-1): {(node_types == ntype).unsqueeze(-1).shape}')
                 raise Exception(e)
