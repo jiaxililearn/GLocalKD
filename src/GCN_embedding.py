@@ -95,7 +95,9 @@ class HetGraphConv(nn.Module):
         # print(f'node_types: {node_types}')
         # print(f'node_types shape: {node_types.shape}')
         het_y = []
+        print(f'node_types: {node_types}')
         for ntype in range(self.num_node_types):
+            print(f'==== Node Type {ntype} ====')
             xmask = (node_types == ntype).unsqueeze(-1).expand(x.size()).to(self.device)
             adjmask = (node_types == ntype).unsqueeze(-1).expand(adj.size())
             adjmask = torch.transpose(adjmask, 1, 2).to(self.device)

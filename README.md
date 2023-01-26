@@ -31,7 +31,7 @@ python main_smiles.py
 
 ```
 python src/main.py --DS streamspot --batch-size 4 --hidden-dim 32 --output-dim 32 --num_epochs 51 --fix-train-test True --lr 0.01 --num-node-types 8
-python src/main.py --DS TraLog --batch-size 4 --hidden-dim 256 --output-dim 128 --num_epochs 51 --fix-train-test True --lr 0.0001
+python src/main.py --DS TraLog --batch-size 4 --hidden-dim 256 --output-dim 128 --num_epochs 51 --fix-train-test True --lr 0.0001 --num-node-types 8
 ```
 
 
