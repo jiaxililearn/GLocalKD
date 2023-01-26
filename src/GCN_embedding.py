@@ -97,8 +97,8 @@ class HetGraphConv(nn.Module):
         het_y = []
         
         for ntype in range(self.num_node_types):
-            print(f'==== Node Type {ntype} ====')
-            print(f'x.size(): {x.size()}')
+            # print(f'==== Node Type {ntype} ====')
+            # print(f'x.size(): {x.size()}')
             try:
                 xmask = (node_types == ntype).unsqueeze(-1).expand(x.size()).to(self.device)
                 adjmask = (node_types == ntype).unsqueeze(-1).expand(adj.size())
@@ -123,15 +123,15 @@ class HetGraphConv(nn.Module):
                 y = y + self.bias
             if self.normalize_embedding:
                 y = F.normalize(y, p=2, dim=2)
-            print(f'y shape: {y.shape}')
+            # print(f'y shape: {y.shape}')
             het_y.append(self.relu(y))
 
         # het_y = torch.stack(het_y)
         het_y = torch.cat(het_y, dim=2)
-        print(f'het_y shape: {het_y.shape}')
+        # print(f'het_y shape: {het_y.shape}')
         # het_y, _ = torch.max(het_y, dim=0)
         het_y = self.fc_het_layer(het_y)
-        print(f'final het_y shape: {het_y.shape}')
+        # print(f'final het_y shape: {het_y.shape}')
         return het_y
 
 
@@ -431,9 +431,9 @@ class GcnEncoderGraph_student(nn.Module):
 
     def forward(self, x, adj, node_types=None, batch_num_nodes=None, **kwargs):
         # conv
-        print(f'[DEBUG] x before forward: {x.size()}')
+        # print(f'[DEBUG] x before forward: {x.size()}')
         x = self.conv_first(x, adj, node_types)
-        print(f'[DEBUG] x in forward: {x.size()}')
+        # print(f'[DEBUG] x in forward: {x.size()}')
         x = self.act(x)
         if self.bn:
             x = self.apply_bn(x)
