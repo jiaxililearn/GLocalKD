@@ -430,7 +430,9 @@ class GcnEncoderGraph_student(nn.Module):
 
     def forward(self, x, adj, node_types=None, batch_num_nodes=None, **kwargs):
         # conv
+        print(f'[DEBUG] x before forward: {x.size()}')
         x = self.conv_first(x, adj, node_types)
+        print(f'[DEBUG] x in forward: {x.size()}')
         x = self.act(x)
         if self.bn:
             x = self.apply_bn(x)
