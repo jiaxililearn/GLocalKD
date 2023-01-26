@@ -129,8 +129,9 @@ class HetGraphConv(nn.Module):
         # het_y = torch.stack(het_y)
         het_y = torch.cat(het_y, dim=2)
         print(f'het_y shape: {het_y.shape}')
-        het_y, _ = torch.max(het_y, dim=0)
+        # het_y, _ = torch.max(het_y, dim=0)
         het_y = self.fc_het_layer(het_y)
+        print(f'final het_y shape: {het_y.shape}')
         return het_y
 
 
