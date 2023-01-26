@@ -85,7 +85,7 @@ class HetGraphConv(nn.Module):
         else:
             self.bias = None
         self.relu = nn.ReLU()
-        self.fc_het_layer = nn.Linear(output_dim*num_node_types, output_dim, bias=True)
+        self.fc_het_layer = nn.Linear(output_dim, output_dim, bias=True)
 
     def forward(self, x, adj, node_types):
 
@@ -126,10 +126,10 @@ class HetGraphConv(nn.Module):
             # print(f'y shape: {y.shape}')
             het_y.append(self.relu(y))
 
-        # het_y = torch.stack(het_y)
-        het_y = torch.cat(het_y, dim=2)
+        het_y = torch.stack(het_y)
+        # het_y = torch.cat(het_y, dim=2)
         # print(f'het_y shape: {het_y.shape}')
-        # het_y, _ = torch.max(het_y, dim=0)
+        het_y, _ = torch.max(het_y, dim=0)
         het_y = self.fc_het_layer(het_y)
         # print(f'final het_y shape: {het_y.shape}')
         return het_y
