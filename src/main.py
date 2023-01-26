@@ -176,6 +176,8 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
                 .mean(dim=1)
                 .mean(dim=0)
             )
+            forward_time = time.time() - begin_time
+
             loss = loss + loss_node
 
             loss.backward(loss.clone().detach())
@@ -185,7 +187,7 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
             total_loss += loss
             elapsed = time.time() - begin_time
             total_time += elapsed
-            print(f"Batch Loss: {loss}; Batch Time: {elapsed};")
+            print(f"Batch Loss: {loss}; Batch Time: {elapsed}; Forward Time: {forward_time}")
 
             # clear gpu cache
             torch.cuda.empty_cache()
