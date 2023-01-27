@@ -193,7 +193,7 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
             # clear gpu cache
             torch.cuda.empty_cache()
 
-        if (epoch) % 2 == 0 and epoch > 0:
+        if (epoch) % 2 == 0:# and epoch > 0:
             epochs.append(epoch)
             model_student.eval()
             loss = []
