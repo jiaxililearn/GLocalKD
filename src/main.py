@@ -147,17 +147,19 @@ def setup_seed(seed):
 def train(dataset, data_test_loader, model_teacher, model_student, args):
     device = 'cpu' if args.cpu else 'cuda'
 
-    if not args.test:
 
-        optimizer = torch.optim.Adam(
-            filter(lambda p: p.requires_grad, model_student.parameters()), lr=args.lr
-        )
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
-        epochs = []
-        auroc_final = 0
-        for epoch in range(args.num_epochs):
-            total_time = 0
-            total_loss = 0.0
+    optimizer = torch.optim.Adam(
+        filter(lambda p: p.requires_grad, model_student.parameters()), lr=args.lr
+    )
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
+    epochs = []
+    auroc_final = 0
+    for epoch in range(args.num_epochs):
+        total_time = 0
+        total_loss = 0.0
+
+        if not args.test:
+            
             model_student.train()
 
             for batch_idx, data in tqdm(enumerate(dataset)):
@@ -210,70 +212,72 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
                 torch.save(
                     model_teacher.state_dict(), f"./model/teacher_{epoch}.pt"
                 )
-    else:
-        if (epoch) % 2 == 0: # and epoch > 0:
+        else:
+            if (epoch) % 2 == 0: # and epoch > 0:
 
-            model_student.load_state_dict(
-                torch.load(f"./model/student_{epoch}.pt", map_location=device)
-            )
-            model_teacher.load_state_dict(
-                torch.load(f"./model/teacher_{epoch}.pt", map_location=device)
-            )
+                model_student.load_state_dict(
+                    torch.load(f"./model/student_{epoch}.pt", map_location=device)
+                )
+                model_teacher.load_state_dict(
+                    torch.load(f"./model/teacher_{epoch}.pt", map_location=device)
+                )
 
-            epochs.append(epoch)
-            model_student.eval()
-            loss = []
-            y = []
-            emb = []
+                epochs.append(epoch)
+                model_student.eval()
+                loss = []
+                y = []
+                emb = []
 
-            for batch_idx, data in enumerate(data_test_loader):
-                try:
-                    adj = Variable(data["adj"].float(), requires_grad=False).to('cpu')
-                    h0 = Variable(data["feats"].float(), requires_grad=False).to('cpu')
-                    node_types = Variable(data["node_types"].int(), requires_grad=False).to('cpu')
+                for batch_idx, data in enumerate(data_test_loader):
+                    try:
+                        adj = Variable(data["adj"].float(), requires_grad=False).to('cpu')
+                        h0 = Variable(data["feats"].float(), requires_grad=False).to('cpu')
+                        node_types = Variable(data["node_types"].int(), requires_grad=False).to('cpu')
 
-                    embed_node, embed = model_student(h0, adj, node_types)
-                    embed_teacher_node, embed_teacher = model_teacher(h0, adj, node_types)
-                    loss_node = torch.mean(
-                        F.mse_loss(embed_node, embed_teacher_node, reduction="none"), dim=2
-                    ).mean(dim=1)
-                    loss_graph = F.mse_loss(embed, embed_teacher, reduction="none").mean(
-                        dim=1
-                    )
-                    loss_ = loss_graph + loss_node
-                    loss_ = np.array(loss_.cpu().detach())
-                    loss.append(loss_)
-                    if data["label"] == 0:
-                        y.append(1)
-                    else:
-                        y.append(0)
-                    emb.append(embed.cpu().detach().numpy())
-                except Exception as e:
-                    # raise Exception(e)
-                    print(f'{batch_idx} Skipped. {e}')
+                        embed_node, embed = model_student(h0, adj, node_types)
+                        embed_teacher_node, embed_teacher = model_teacher(h0, adj, node_types)
+                        loss_node = torch.mean(
+                            F.mse_loss(embed_node, embed_teacher_node, reduction="none"), dim=2
+                        ).mean(dim=1)
+                        loss_graph = F.mse_loss(embed, embed_teacher, reduction="none").mean(
+                            dim=1
+                        )
+                        loss_ = loss_graph + loss_node
+                        loss_ = np.array(loss_.cpu().detach())
+                        loss.append(loss_)
+                        if data["label"] == 0:
+                            y.append(1)
+                        else:
+                            y.append(0)
+                        emb.append(embed.cpu().detach().numpy())
+                    except Exception as e:
+                        # raise Exception(e)
+                        print(f'{batch_idx} Skipped. {e}')
 
-                torch.cuda.empty_cache()
+                    torch.cuda.empty_cache()
 
-            label_test = []
-            for loss_ in loss:
-                label_test.append(loss_)
-            label_test = np.array(label_test)
+                label_test = []
+                for loss_ in loss:
+                    label_test.append(loss_)
+                label_test = np.array(label_test)
 
-            fpr_ab, tpr_ab, _ = roc_curve(y, label_test)
-            test_roc_ab = auc(fpr_ab, tpr_ab)
+                fpr_ab, tpr_ab, _ = roc_curve(y, label_test)
+                test_roc_ab = auc(fpr_ab, tpr_ab)
 
-            precision, recall, pr_thresholds = precision_recall_curve(
-                y, label_test
-            )
-            ap = auc(recall, precision)
-            print(
-                "semi-supervised abnormal detection: auroc_ab: {}".format(test_roc_ab)
-            )
-            print(f"\tAUC:{test_roc_ab}; Avg Precision:{ap};")
+                precision, recall, pr_thresholds = precision_recall_curve(
+                    y, label_test
+                )
+                ap = auc(recall, precision)
+                print(
+                    "semi-supervised abnormal detection: auroc_ab: {}".format(test_roc_ab)
+                )
+                print(f"\tAUC:{test_roc_ab}; Avg Precision:{ap};")
 
-        if epoch == (args.num_epochs - 1):
-            auroc_final = test_roc_ab
-        print(f"Epoch Loss: {total_loss}; Epoch Time: {total_time};")
+        if args.test:
+            if epoch == (args.num_epochs - 1):
+                auroc_final = test_roc_ab
+        else:
+            print(f"Epoch Loss: {total_loss}; Epoch Time: {total_time};")
 
     return auroc_final
 
