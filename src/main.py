@@ -231,7 +231,7 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
                 y = []
                 emb = []
 
-                for batch_idx, data in enumerate(data_test_loader):
+                for batch_idx, data in tqdm(enumerate(data_test_loader)):
                     adj = Variable(data["adj"].float(), requires_grad=False).to('cpu')
                     h0 = Variable(data["feats"].float(), requires_grad=False).to('cpu')
                     node_types = Variable(data["node_types"].int(), requires_grad=False).to('cpu')
