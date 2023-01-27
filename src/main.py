@@ -127,6 +127,12 @@ def arg_parse():
     parser.add_argument(
         "--sagemaker", dest="sagemaker", type=bool, default=False, help="if using sagemaker training"
     )
+    parser.add_argument(
+        "--test", dest="test", type=bool, default=False, help="if skip training"
+    )
+    parser.add_argument(
+        "--checkpoint", dest="checkpoint", type=int, default=None, help="use a checkpoint model"
+    )
     return parser.parse_args()
 
 
@@ -141,60 +147,79 @@ def setup_seed(seed):
 def train(dataset, data_test_loader, model_teacher, model_student, args):
     device = 'cpu' if args.cpu else 'cuda'
 
-    optimizer = torch.optim.Adam(
-        filter(lambda p: p.requires_grad, model_student.parameters()), lr=args.lr
-    )
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
-    epochs = []
-    auroc_final = 0
-    for epoch in range(args.num_epochs):
-        total_time = 0
-        total_loss = 0.0
-        model_student.train()
+    if not args.test:
 
-        for batch_idx, data in tqdm(enumerate(dataset)):
-            begin_time = time.time()
-            model_student.zero_grad()
-            adj = Variable(data["adj"].float(), requires_grad=False).to(device)
-            h0 = Variable(data["feats"].float(), requires_grad=False).to(device)
-            node_types = Variable(data["node_types"].int(), requires_grad=False).to(device)
+        optimizer = torch.optim.Adam(
+            filter(lambda p: p.requires_grad, model_student.parameters()), lr=args.lr
+        )
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
+        epochs = []
+        auroc_final = 0
+        for epoch in range(args.num_epochs):
+            total_time = 0
+            total_loss = 0.0
+            model_student.train()
 
-            embed_node, embed = model_student(h0, adj, node_types)
-            # print('---> finished student <---')
-            embed_teacher_node, embed_teacher = model_teacher(h0, adj, node_types)
-            # print('---> finished teacher <---')
-            embed_teacher = embed_teacher.detach()
-            embed_teacher_node = embed_teacher_node.detach()
-            loss_node = (
-                torch.mean(
-                    F.mse_loss(embed_node, embed_teacher_node, reduction="none"), dim=2
+            for batch_idx, data in tqdm(enumerate(dataset)):
+                begin_time = time.time()
+                model_student.zero_grad()
+                adj = Variable(data["adj"].float(), requires_grad=False).to(device)
+                h0 = Variable(data["feats"].float(), requires_grad=False).to(device)
+                node_types = Variable(data["node_types"].int(), requires_grad=False).to(device)
+
+                embed_node, embed = model_student(h0, adj, node_types)
+                # print('---> finished student <---')
+                embed_teacher_node, embed_teacher = model_teacher(h0, adj, node_types)
+                # print('---> finished teacher <---')
+                embed_teacher = embed_teacher.detach()
+                embed_teacher_node = embed_teacher_node.detach()
+                loss_node = (
+                    torch.mean(
+                        F.mse_loss(embed_node, embed_teacher_node, reduction="none"), dim=2
+                    )
+                    .mean(dim=1)
+                    .mean(dim=0)
                 )
-                .mean(dim=1)
-                .mean(dim=0)
+                loss = (
+                    F.mse_loss(embed, embed_teacher, reduction="none")
+                    .mean(dim=1)
+                    .mean(dim=0)
+                )
+                forward_time = time.time() - begin_time
+
+                loss = loss + loss_node
+
+                # loss.backward(loss.clone().detach())
+                loss.backward()
+                nn.utils.clip_grad_norm_(model_student.parameters(), args.clip)
+                optimizer.step()
+                scheduler.step()
+                total_loss += loss
+                elapsed = time.time() - begin_time
+                total_time += elapsed
+                print(f"Batch Loss: {loss}; Batch Time: {elapsed}; Forward Time: {forward_time}")
+
+                # clear gpu cache
+                torch.cuda.empty_cache()
+
+            if epoch % 2 == 0:
+                print('saving model ..')
+                torch.save(
+                    model_student.state_dict(), f"./model/student_{epoch}.pt"
+                )
+                torch.save(
+                    model_teacher.state_dict(), f"./model/teacher_{epoch}.pt"
+                )
+    else:
+        if (epoch) % 2 == 0: # and epoch > 0:
+
+            model_student.load_state_dict(
+                torch.load(f"./model/student_{epoch}.pt", map_location=device)
             )
-            loss = (
-                F.mse_loss(embed, embed_teacher, reduction="none")
-                .mean(dim=1)
-                .mean(dim=0)
+            model_teacher.load_state_dict(
+                torch.load(f"./model/teacher_{epoch}.pt", map_location=device)
             )
-            forward_time = time.time() - begin_time
 
-            loss = loss + loss_node
-
-            # loss.backward(loss.clone().detach())
-            loss.backward()
-            nn.utils.clip_grad_norm_(model_student.parameters(), args.clip)
-            optimizer.step()
-            scheduler.step()
-            total_loss += loss
-            elapsed = time.time() - begin_time
-            total_time += elapsed
-            print(f"Batch Loss: {loss}; Batch Time: {elapsed}; Forward Time: {forward_time}")
-
-            # clear gpu cache
-            torch.cuda.empty_cache()
-
-        if (epoch) % 2 == 0:# and epoch > 0:
             epochs.append(epoch)
             model_student.eval()
             loss = []
@@ -305,20 +330,33 @@ if __name__ == "__main__":
         num_test = len(test_index)
         print(num_train, num_test)
 
-        dataset_sampler_train = GraphSampler(
-            # graphs_train,
+        if not args.test:
+            dataset_sampler_train = GraphSampler(
+                # graphs_train,
+                graphs,
+                train_index,
+                G_list=None,
+                features=args.feature,
+                normalize=False,
+                max_num_nodes=max_nodes_num,
+                sample_size=args.sample_size
+            )
+            # print(f'dataset_sampler_train sample 1: {dataset_sampler_train[0]}')
+        else:
+            dataset_sampler_train = None
+
+        dataset_sampler_test = GraphSampler(
+            # graphs_test,
             graphs,
-            train_index,
+            test_index,
             G_list=None,
             features=args.feature,
             normalize=False,
             max_num_nodes=max_nodes_num,
-            sample_size=args.sample_size
         )
-        # print(f'dataset_sampler_train sample 1: {dataset_sampler_train[0]}')
 
         model_teacher = GCN_embedding.GcnEncoderGraph_teacher(
-            dataset_sampler_train.feat_dim,
+            dataset_sampler_test.feat_dim,
             args.hidden_dim,
             args.output_dim,
             2,
@@ -330,7 +368,7 @@ if __name__ == "__main__":
             param.requires_grad = False
 
         model_student = GCN_embedding.GcnEncoderGraph_student(
-            dataset_sampler_train.feat_dim,
+            dataset_sampler_test.feat_dim,
             args.hidden_dim,
             args.output_dim,
             2,
@@ -339,19 +377,14 @@ if __name__ == "__main__":
             args=args,
         ).to(device)
 
-        data_train_loader = torch.utils.data.DataLoader(
-            dataset_sampler_train, shuffle=True, batch_size=args.batch_size
-        )
+        if not args.test:
+            data_train_loader = torch.utils.data.DataLoader(
+                dataset_sampler_train, shuffle=True, batch_size=args.batch_size
+            )
+        else:
+            data_train_loader = None
 
-        dataset_sampler_test = GraphSampler(
-            # graphs_test,
-            graphs,
-            test_index,
-            G_list=None,
-            features=args.feature,
-            normalize=False,
-            max_num_nodes=max_nodes_num,
-        )
+        
         data_test_loader = torch.utils.data.DataLoader(
             dataset_sampler_test, shuffle=False, batch_size=1
         )
