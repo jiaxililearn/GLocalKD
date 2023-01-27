@@ -223,7 +223,8 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
                         y.append(0)
                     emb.append(embed.cpu().detach().numpy())
                 except Exception as e:
-                    raise Exception(e)
+                    # raise Exception(e)
+                    print(f'Skipped. {e}')
 
             label_test = []
             for loss_ in loss:
