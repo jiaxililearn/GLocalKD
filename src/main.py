@@ -200,26 +200,29 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
             emb = []
 
             for batch_idx, data in enumerate(data_test_loader):
-                adj = Variable(data["adj"].float(), requires_grad=False)  # .to(device)
-                h0 = Variable(data["feats"].float(), requires_grad=False)  # .to(device)
-                node_types = Variable(data["node_types"].int(), requires_grad=False)  # .to(device)
+                try:
+                    adj = Variable(data["adj"].float(), requires_grad=False)  # .to(device)
+                    h0 = Variable(data["feats"].float(), requires_grad=False)  # .to(device)
+                    node_types = Variable(data["node_types"].int(), requires_grad=False)  # .to(device)
 
-                embed_node, embed = model_student(h0, adj, node_types)
-                embed_teacher_node, embed_teacher = model_teacher(h0, adj, node_types)
-                loss_node = torch.mean(
-                    F.mse_loss(embed_node, embed_teacher_node, reduction="none"), dim=2
-                ).mean(dim=1)
-                loss_graph = F.mse_loss(embed, embed_teacher, reduction="none").mean(
-                    dim=1
-                )
-                loss_ = loss_graph + loss_node
-                loss_ = np.array(loss_.cpu().detach())
-                loss.append(loss_)
-                if data["label"] == 0:
-                    y.append(1)
-                else:
-                    y.append(0)
-                emb.append(embed.cpu().detach().numpy())
+                    embed_node, embed = model_student(h0, adj, node_types)
+                    embed_teacher_node, embed_teacher = model_teacher(h0, adj, node_types)
+                    loss_node = torch.mean(
+                        F.mse_loss(embed_node, embed_teacher_node, reduction="none"), dim=2
+                    ).mean(dim=1)
+                    loss_graph = F.mse_loss(embed, embed_teacher, reduction="none").mean(
+                        dim=1
+                    )
+                    loss_ = loss_graph + loss_node
+                    loss_ = np.array(loss_.cpu().detach())
+                    loss.append(loss_)
+                    if data["label"] == 0:
+                        y.append(1)
+                    else:
+                        y.append(0)
+                    emb.append(embed.cpu().detach().numpy())
+                except Exception as e:
+                    print(f'[DEBUG] Skipped Batch. {e}')
 
             label_test = []
             for loss_ in loss:
