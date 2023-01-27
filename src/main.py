@@ -157,9 +157,9 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
     for epoch in range(args.num_epochs):
         total_time = 0
         total_loss = 0.0
-
+        print(type(args.test))
+        print(args.test)
         if not args.test:
-            
             model_student.train()
 
             for batch_idx, data in tqdm(enumerate(dataset)):
@@ -347,6 +347,7 @@ if __name__ == "__main__":
             )
             # print(f'dataset_sampler_train sample 1: {dataset_sampler_train[0]}')
         else:
+            print('Skip loading train Sampler ..')
             dataset_sampler_train = None
 
         dataset_sampler_test = GraphSampler(
@@ -386,18 +387,20 @@ if __name__ == "__main__":
                 dataset_sampler_train, shuffle=True, batch_size=args.batch_size
             )
         else:
+            print('Skip loading train dataloader ..')
             data_train_loader = None
 
-        
         data_test_loader = torch.utils.data.DataLoader(
             dataset_sampler_test, shuffle=False, batch_size=1
         )
         result = train(
             data_train_loader, data_test_loader, model_teacher, model_student, args
         )
-        result_auc.append(result)
 
-    result_auc = np.array(result_auc)
-    auc_avg = np.mean(result_auc)
-    auc_std = np.std(result_auc)
-    print("auroc{}, average: {}, std: {}".format(result_auc, auc_avg, auc_std))
+        if args.test:
+            result_auc.append(result)
+    if args.test:
+        result_auc = np.array(result_auc)
+        auc_avg = np.mean(result_auc)
+        auc_std = np.std(result_auc)
+        print("auroc{}, average: {}, std: {}".format(result_auc, auc_avg, auc_std))
