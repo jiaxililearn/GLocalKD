@@ -4,6 +4,7 @@
 @editor: Jiaxi Li
 """
 import os
+import traceback
 import numpy as np
 from sklearn.utils.random import sample_without_replacement
 from sklearn.metrics import auc, precision_recall_curve, roc_curve
@@ -222,6 +223,7 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
                         y.append(0)
                     emb.append(embed.cpu().detach().numpy())
                 except Exception as e:
+                    traceback.print_stack()
                     print(f'[DEBUG] Skipped Batch. {e}')
 
             label_test = []
