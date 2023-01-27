@@ -95,9 +95,9 @@ class HetGraphConv(nn.Module):
         # print(f'node_types: {node_types}')
         # print(f'node_types shape: {node_types.shape}')
         het_y = []
-        # x = x.to(node_types.device)
-        # adj = adj.to(node_types.device)
-        # node_types = node_types.to(node_types.device)
+        x = x.to(node_types.device)
+        adj = adj.to(node_types.device)
+        node_types = node_types.to(node_types.device)
 
         for ntype in range(self.num_node_types):
             # print(f'==== Node Type {ntype} ====')
