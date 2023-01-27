@@ -181,7 +181,8 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
 
             loss = loss + loss_node
 
-            loss.backward(loss.clone().detach())
+            # loss.backward(loss.clone().detach())
+            loss.backward()
             nn.utils.clip_grad_norm_(model_student.parameters(), args.clip)
             optimizer.step()
             scheduler.step()
@@ -224,7 +225,7 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
                     emb.append(embed.cpu().detach().numpy())
                 except Exception as e:
                     # raise Exception(e)
-                    print(f'Skipped. {e}')
+                    print(f'{batch_idx} Skipped. {e}')
 
             label_test = []
             for loss_ in loss:
