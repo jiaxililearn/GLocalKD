@@ -227,6 +227,8 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
                     # raise Exception(e)
                     print(f'{batch_idx} Skipped. {e}')
 
+                torch.cuda.empty_cache()
+
             label_test = []
             for loss_ in loss:
                 label_test.append(loss_)
