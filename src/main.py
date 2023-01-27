@@ -193,7 +193,7 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
             # clear gpu cache
             torch.cuda.empty_cache()
 
-        if (epoch + 1) % 2 == 0 and epoch > 0:
+        if (epoch) % 2 == 0 and epoch > 0:
             epochs.append(epoch)
             model_student.eval()
             loss = []
@@ -223,8 +223,7 @@ def train(dataset, data_test_loader, model_teacher, model_student, args):
                         y.append(0)
                     emb.append(embed.cpu().detach().numpy())
                 except Exception as e:
-                    traceback.print_stack()
-                    print(f'[DEBUG] Skipped Batch. {e}')
+                    raise Exception(e)
 
             label_test = []
             for loss_ in loss:
