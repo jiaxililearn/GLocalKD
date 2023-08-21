@@ -10,7 +10,7 @@ Some of datasets are put in ./dataset folder. Due to the large file size limitat
 
 ## Large Size Dataset
 ```shell
-aws s3 sync s3://prod-tpgt-knowledge-lake-sandpit-v1/tmp/data/glocalkd/streamspot/ dataset/streamspot/
+aws s3 sync s3://prod-xxxx-knowledge-lake-sandpit-v1/tmp/data/glocalkd/streamspot/ dataset/streamspot/
 ```
 ## Train
 
